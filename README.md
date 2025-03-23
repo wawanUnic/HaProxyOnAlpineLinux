@@ -116,14 +116,90 @@ haproxy -c -f /etc/haproxy/haproxy.cfg
 rc-service haproxy reload
 ```
 
-6. создаем первый сертификат для каждого домера
-7. создаем повторный скрипт
-8. настриваем крон
+### 9.1 Создаем первый сертификат для первого домена getFirstDozzle.sh (нужно создать папку для объедененного сертификата - mkdir /etc/haproxy/certs)
+```
+#!/bin/sh
+cat /etc/letsencrypt/live/nero-dozzle.duckdns.org/fullchain.pem /etc/letsencrypt/live/nero-dozzle.duckdns.org/privkey.pem > /etc/haproxy/certs/nero-dozzle.duckdns.org.pem
+rc-service haproxy reload
+```
 
-### 22. Для сохрания коммита в постоянную память Alpine используем команду
+### 9.2 Создаем первый сертификат для второго домена getFirstN8N.sh
+```
+#!/bin/sh
+cat /etc/letsencrypt/live/nero-n8n.duckdns.org/fullchain.pem /etc/letsencrypt/live/nero-n8n.duckdns.org/privkey.pem > /etc/haproxy/certs/nero-n8n.duckdns.org.pem
+rc-service haproxy reload
+```
+
+### 9.3 Создаем первый сертификат для третьего домена getFirstSupabase.sh
+```
+#!/bin/sh
+cat /etc/letsencrypt/live/nero-supabase.duckdns.org/fullchain.pem /etc/letsencrypt/live/nero-supabase.duckdns.org/privkey.pem > /etc/haproxy/certs/nero-supabase.duckdns.org.pem
+rc-service haproxy reload
+```
+
+### 9.4 Создаем первый сертификат для четвертого домена getFirstFlowise.sh
+```
+#!/bin/sh
+cat /etc/letsencrypt/live/nero-flowise.duckdns.org/fullchain.pem /etc/letsencrypt/live/nero-flowise.duckdns.org/privkey.pem > /etc/haproxy/certs/nero-flowise.duckdns.org.pem
+rc-service haproxy reload
+```
+
+### 9.5 Создаем сертификаты
+```
+chmod +x /root/getFirstDozzle.sh
+chmod +x /root/getFirstN8N.sh
+chmod +x /root/getFirstSupabase.sh
+chmod +x /root/getFirstFlowise.sh
+certbot certonly --standalone --http-01-port 1111 -d nero-dozzle.duckdns.org --post-hook "/root/getFirstDozzle.sh"
+certbot certonly --standalone --http-01-port 1111 -d nero-n8n.duckdns.org --post-hook "/root/getFirstN8N.sh"
+certbot certonly --standalone --http-01-port 1111 -d nero-supabase.duckdns.org --post-hook "/root/getFirstSupabase.sh"
+certbot certonly --standalone --http-01-port 1111 -d nero-flowise.duckdns.org --post-hook "/root/getFirstFlowise.sh"
+```
+
+### 10. Создаем скрипт для автоматического перевыпуска всех сертификатов autoCertBot.sh (и делаем его исполняемым chmod +x /root/autoCertBot.sh)
+```
+#!/bin/bash
+LOG_FILE="/root/haproxy_cert_update.log"
+
+CERT_DIR="/etc/letsencrypt/live"
+HAPROXY_CERT_DIR="/etc/haproxy/certs"
+DOMAINS=("nero-dozzle.duckdns.com" "nero-n8n.duckdns.org" "nero-supabase.duckdns.org" "nero-flowise.duckdns.org")
+
+echo "[$(date)] Starting certificate update..." >> "$LOG_FILE"
+
+for domain in "${DOMAINS[@]}"; do
+    if [ -f "$CERT_DIR/$domain/fullchain.pem" ] && [ -f "$CERT_DIR/$domain/privkey.pem" ]; then
+        cat "$CERT_DIR/$domain/fullchain.pem" "$CERT_DIR/$domain/privkey.pem" > "$HAPROXY_CERT_DIR/$domain.pem"
+        echo "[$(date)] Certificate for $domain updated successfully." >> "$LOG_FILE"
+    else
+        echo "[$(date)] ERROR: Certificate files for $domain are missing!" >> "$LOG_FILE"
+    fi
+done
+
+# Проверка конфигурации HAProxy
+haproxy -c -f /etc/haproxy/haproxy.cfg >> "$LOG_FILE" 2>&1
+if [ $? -eq 0 ]; then
+    rc-service haproxy reload >> "$LOG_FILE" 2>&1
+    echo "[$(date)] HAProxy reloaded successfully." >> "$LOG_FILE"
+else
+    echo "[$(date)] ERROR: Invalid HAProxy configuration." >> "$LOG_FILE"
+fi
+
+echo "[$(date)] Certificate update process finished." >> "$LOG_FILE"
+```
+
+### 11. Настриваем крон на проверку каждые 12 часов
+```
+crontab -e
+	0 */12 * * * certbot renew --quiet
+```
+
+### 12. Для сохрания коммита в постоянную память Alpine используем команду
 ```
 lbu commit
 ```
 
-9. перезапускаем перепроверяем.
-10. 
+### 13. Перезапускаем и перепроверяем
+```
+reboot
+```
