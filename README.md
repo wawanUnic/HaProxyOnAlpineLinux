@@ -62,7 +62,7 @@ apk add certbot
 certbot --version
 ```
 
-### 7. Конфигурируем HaProxy
+### 7. Конфигурируем HaProxy (/etc/haproxy/haproxy.cfg)
 ```
 global
     maxconn 4096
