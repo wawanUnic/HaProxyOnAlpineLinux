@@ -99,7 +99,7 @@ backend n8n
 backend flowise
     server server12:3000 192.168.4.117:3000 check
 backend backend_default
-    errorfile 503 /etc/haproxy/errors/503.http
+    errorfile 503 /etc/haproxy/errors/503.html
 listen stats
     bind *:8404
     stats enable
